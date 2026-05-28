@@ -1,0 +1,108 @@
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body{
+    width: 360px;
+    min-height: 500px;
+    font-family: 'Outfit', sans-serif;
+    background: #f4ffe8;
+    color: #3d4d35;
+    padding: 18px;
+}
+
+.container{
+    width: 100%;
+    background: rgba(255,255,255,0.45);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(170, 220, 170, 0.4);
+    border-radius: 28px;
+    padding: 20px;
+    box-shadow:
+        0 10px 30px rgba(127, 169, 116, 0.18),
+        inset 0 1px 1px rgba(255,255,255,0.6);
+
+}
+
+.header{
+    margin-bottom: 22px;
+}
+
+.header h1{
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -1px;
+    color: #58724f;
+}
+
+.header p{
+    margin-top: 4px;
+    font-size: 13px;
+    color: #7a8f72;
+    font-weight: 300;
+}
+
+.controls{
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.controls img{
+    width: 72px;
+    height: 72px;
+    object-fit: cover;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    border: 2px solid transparent;
+    align-self: center;
+    box-shadow:
+        0 8px 20px rgba(117, 164, 104, 0.18);
+}
+
+.control-card{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 14px;
+    border-radius: 22px;
+    transition: all 0.25s ease;
+    background: rgba(255,255,255,0.35);
+    width: 150px;
+    margin: 0 auto;
+}
+
+.control-card:hover{
+    transform: translateY(-4px);
+    background: rgba(220,247,206,0.65);
+}
+
+.control-img{
+    width: 75px;
+    height: auto;
+    object-fit: contain;
+    filter:
+        drop-shadow(0 8px 18px rgba(151, 201, 131, 0.32));
+}
+
+.control-text{
+    margin-top: 10px;
+    font-size: 14px;
+    color: #58724f;
+    font-weight: 400;
+}
+
+.pill{
+    display: inline-block;
+    padding: 8px 12px;
+    background: #dcf7ce;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #56714f;
+}

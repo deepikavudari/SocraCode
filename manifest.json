@@ -1,0 +1,21 @@
+{
+    "name" : "SocraCode",
+    "version" : "1.0",
+    "permissions" : ["activeTab","scripting","storage"],
+    "host_permissions" : ["https://leetcode.com/*"],
+    "background" : {
+        "service_worker" : "background.js"
+    },
+    "content_scripts" :[
+        {
+            "matches" : ["https://leetcode.com/*"],
+            "js" : ["content.js"]
+        }
+    ],
+    "action" : {
+        "default_title" : "SocraTest",
+        "default_popup" : "popup.html",
+        "default_icon" : "assets/icon.png"
+    },
+    "manifest_version" : 3
+}
