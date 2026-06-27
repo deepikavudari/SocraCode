@@ -1,9 +1,10 @@
 import { getCurrentTab } from "./utils.js";
 
-
 const container = document.getElementsByClassName("container")[0];
 let hints = null;
 let tcAndsc = null;
+let edgeCases = null;
+const API_KEY = CONFIG.API_KEY;
 
 document.addEventListener("DOMContentLoaded", async()=>{
     const activeTab = await getCurrentTab();
@@ -16,7 +17,7 @@ document.addEventListener("DOMContentLoaded", async()=>{
         container.innerHTML = `<h4><i> This is not a leetcode problems page</i></h4>`
     }
 
-})
+});
 
 
 function createAttributes(src, eventListener, controlParentElement, text){
@@ -40,7 +41,7 @@ function createAttributes(src, eventListener, controlParentElement, text){
 }
 
 async function onGetHints(){
-    console.log("clicked get hints");
+    showLoading("Fetching hints!");
     if(hints){
         console.log("using precomputed hints");
         renderHints(hints);
@@ -50,33 +51,43 @@ async function onGetHints(){
         ["questionData"],
         async (result) =>{
             const question = result.questionData;
-            const API_KEY = "AIzaSyC6RWwCyXNlV_ne3JhY8Ei9-brnaURmo0M";
-            const response = await fetch( `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${API_KEY}`,{
+            const response = await fetch("https://api.groq.com/openai/v1/chat/completions",{
                 method : "POST",
 
                 headers : {
-                    "Content-Type" : "application/json"
+                    "Content-Type" : "application/json",
+                    "Authorization" : `Bearer ${API_KEY}`
                 },
                 body : JSON.stringify({
-                    contents : [
+                model : "openai/gpt-oss-120b",
+                response_format : {
+                    type : "json_object"
+                },
+                    messages : [
                         {
-                            parts : [
-                                {
-                                    text : `
+                            role : "user",
+                            content : `
                                     Your are a DSA mentor.
                                     For this leetcode problem : ${question.title},
                                     ${question.desc}
                                     Give 3 progressive hints that guide the user toward the solution WITHOUT giving away the answer. Start vague, get more specific. ONLY GIVE HINTS and nothing else
                                     The hints should not be too big one or two liners but they should be explanatory and it should develop the thought process of the user instead of spoon feeding the ans.
                                     Don't make any font bold or use any styles on it.
+                                    Return ONLY valid JSON.
+                                    Format : 
+                                    {
+                                        "hints" : [
+                                            "hint 1",
+                                            "hint 2",
+                                            "hint 3"
+                                        ]
+                                    }
                                     `
-                                }
-                            ]
                         }
                     ]
                 })
 
-            })
+            });
             const data = await response.json();
             console.log(data);
 
@@ -85,15 +96,16 @@ async function onGetHints(){
                 return;
             }
 
-            const rawHints = data.candidates[0].content.parts[0].text;
-            hints = rawHints.split(/Hint \d:/).filter(hint => hint.trim() !== "");
+            const text = data.choices[0].message.content;
+            const parsed = JSON.parse(text);
+            hints = parsed.hints;
             renderHints(hints);
         })
         
 }
 
 function onGetTcAndSc(){
-    console.log("clicked get tc and sc");
+    showLoading("Fetching time and space complexity");
 
     if(tcAndsc){
         console.log("using precomputed tc and sc");
@@ -104,28 +116,37 @@ function onGetTcAndSc(){
         ["questionData"],
         async (result) =>{
             const question = result.questionData;
-            const API_KEY = "AIzaSyC6RWwCyXNlV_ne3JhY8Ei9-brnaURmo0M";
-            const response = await fetch( `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${API_KEY}`,{
+            const response = await fetch( "https://api.groq.com/openai/v1/chat/completions",{
                 method : "POST",
-
                 headers : {
-                    "Content-Type" : "application/json"
+                    "Content-Type" : "application/json",
+                    "Authorization" : `Bearer ${API_KEY}`
                 },
                 body : JSON.stringify({
-                    contents : [
+                    model : "openai/gpt-oss-120b",
+                    response_format : {
+                        type : "json_object"
+                    },
+                    messages : [
                         {
-                            parts : [
-                                {
-                                    text : `
-                                    Your are a DSA mentor.
+                            role : "user",
+                            content : `
+                            
+                            Your are a DSA mentor.
                                     For this leetcode problem : ${question.title},
                                     ${question.desc}
                                     Give the expected time complexity and space complexity for the optimized solution of the give question
                                     Give the answer in this format -> Time complexity : and then give explanation mostly one line as to why it should be that and do the same for space complexity in the next line.
                                     Don't make any font bold or use any styles on it.
+                                    Return ONLY valid JSON.
+                                    Format : 
+                                    {
+                                        "tcandsc" : [
+                                            "tc",
+                                            "sc"
+                                        ]
+                                    }
                                     `
-                                }
-                            ]
                         }
                     ]
                 })
@@ -134,19 +155,99 @@ function onGetTcAndSc(){
             const data = await response.json();
 
             if(!response.ok){
-                renderError(data.error?.message || "Failed to expected time and space complexity");
+                renderError(data.error?.message || "Failed to get expected time and space complexity");
                 return;
             }
-
-            tcAndsc = data.candidates[0].content.parts[0].text;
+            const text = data.choices[0].message.content;
+            const parsed = JSON.parse(text);
+            tcAndsc = parsed.tcandsc;
             renderTcandSc(tcAndsc);
         })
         
 
 }
 
+function showLoading(text) {
+    container.innerHTML = `
+        <div class="loading-wrapper">
+            <div class="spinner"></div>
+            <p>${text}</p>
+        </div>
+    `;
+}
+
 function onGenerateTestcases(){
-    console.log("clicked generate testcases");
+    
+    showLoading("Generating test cases..");
+
+    if(edgeCases){
+        console.log("using precomputed tc and sc");
+        renderTestcases(edgeCases);
+        return;
+    }
+    chrome.storage.sync.get(
+        ["questionData"],
+        async (result) =>{
+            const question = result.questionData;
+            const response = await fetch( "https://api.groq.com/openai/v1/chat/completions",{
+                method : "POST",
+                headers : {
+                    "Content-Type" : "application/json",
+                    "Authorization" : `Bearer ${API_KEY}`
+                },
+                body : JSON.stringify({
+                    model : "openai/gpt-oss-120b",
+                    response_format : {
+                        type : "json_object"
+                    },
+                    messages : [
+                        {
+                            role : "user",
+                            content : `
+                                    PROBLEM:
+                                    Title: ${question.title}
+                                    Description: ${question.desc}
+
+                                    You are a competitive programming test case generator.
+
+                                    Generate exactly 8 test cases for the given problem keeping constraints in mind.
+
+                                    Rules:
+                                    - Output ONLY valid JSON
+                                    - No explanations
+                                    - No markdown
+
+                                    Ensure:
+                                    - Cases are diverse
+                                    - Include edge cases and stress cases
+                                    - Cover boundary conditions and worst-case inputs
+
+                                    Before finalizing, ensure that each test case targets a different bug class and no two cases are redundant.
+
+                                    Return format:
+                                    {
+                                    "edgeCases": ["case1", "case2", "case3", "case4", "case5", "case6", "case7", "case8"]
+                                    }
+                                    `
+                        }
+                    ]
+                })
+
+            })
+            const data = await response.json();
+
+            if(!response.ok){
+                renderError(data.error?.message || "Failed to get testcases, try again later");
+                return;
+            }
+            const text = data.choices[0].message.content;
+            const parsed = JSON.parse(text);
+            edgeCases = Array.isArray(parsed.edgeCases) ? parsed.edgeCases : [];
+            renderTestcases(edgeCases);
+        })
+        
+
+
 }
 
 function renderHome(){
@@ -157,14 +258,6 @@ function renderHome(){
 }
 
 function renderHints(hints){
-    if(hints===null){
-        container.innerHTML = `
-            <div class="screen-title">
-                Some error occured, try again later!
-            </div>
-        `;
-        return;
-    }
     container.innerHTML = `
 
         <button class="back-btn">
@@ -189,20 +282,36 @@ function renderHints(hints){
 
 function renderTcandSc(tcsc){
     console.log(tcsc);
-    const tc = tcsc.match(/Time complexity\s*:\s*(.*)/i)?.[1];
-    const sc = tcsc.match(/Space complexity\s*:\s*(.*)/i)?.[1];
 
         container.innerHTML = `
 
         <button class="back-btn">
             ← Back
         </button>
-        ${createCard("Time Complexity",tc)}
-        ${createCard("Space Complexity",sc)}
+        ${createCard("Time Complexity",tcsc[0])}
+        ${createCard("Space Complexity",tcsc[1])}
     `;
 
     document.querySelector(".back-btn").addEventListener("click",renderHome);
 
+}
+
+function renderTestcases(edgeCases){
+    console.log(edgeCases);
+
+    container.innerHTML = `
+        <button class="back-btn">
+            ← Back
+        </button>
+        <div>
+            ${edgeCases.map((testcase, index) =>
+                    createCard(`Case ${index+1}`,testcase)
+            ).join("")}
+        </div>
+    `
+
+    container.querySelector(".back-btn").addEventListener("click",renderHome);
+    
 }
 
 function createCard(title,content){
